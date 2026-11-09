@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>ASTRA — 3D Ishxona</title>
+<style>
+:root{--bg:#05070f;--panel:rgba(11,17,32,.72);--line:rgba(120,160,255,.18);
+  --txt:#e8eeff;--dim:#8ea0c4;--ok:#34d399;--off:#5b6b8c;--warn:#fbbf24}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;z-index:5}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.topbar{top:16px;left:16px;display:flex;align-items:center;gap:12px;padding:10px 16px}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:800;
+  background:linear-gradient(135deg,#6c63ff,#22d3ee);color:#04101f;letter-spacing:-.5px}
+.brand b{display:block;font-size:15px;letter-spacing:.4px}
+.brand small{color:var(--dim);font-size:11px}
+.statusline{top:16px;right:16px;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px}
+.badge{display:flex;align-items:center;gap:7px;color:var(--dim);font-weight:600;letter-spacing:.3px}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--off);box-shadow:0 0 0 0 rgba(52,211,153,.6)}
+.badge.live i{background:var(--ok);animation:pulse 1.8s infinite}
+.badge.demo i{background:var(--warn);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 9px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.panel{top:84px;right:16px;width:290px;padding:12px;display:flex;flex-direction:column;gap:8px;
+  max-height:calc(100vh - 170px);overflow:auto}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;padding:2px 6px 6px;font-size:12px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.panel-sub{text-transform:none;letter-spacing:0;color:var(--ok);font-size:11px}
+.agent-row{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;width:100%;
+  padding:9px 10px;border-radius:12px;border:1px solid transparent;background:rgba(255,255,255,.03);
+  color:inherit;font:inherit;cursor:pointer;transition:.18s;text-align:left}
+.agent-row:hover{background:rgba(108,99,255,.14);border-color:rgba(108,99,255,.35);transform:translateX(-2px)}
+.agent-row .dot{width:10px;height:10px;border-radius:50%;background:var(--off);transition:.25s}
+.agent-row .dot.on{background:var(--c);box-shadow:0 0 10px var(--c)}
+.agent-meta b{display:block;font-size:13px}
+.agent-meta small{color:var(--dim);font-size:10.5px}
+.agent-nums{text-align:right;min-width:38px}
+.agent-nums b{display:block;font-size:13px;font-variant-numeric:tabular-nums}
+.agent-nums small{color:var(--dim);font-size:9.5px;letter-spacing:.04em}
+.toolbar{bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px}
+.tool{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt);font:inherit;font-size:12px;
+  padding:9px 14px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:.18s;white-space:nowrap}
+.tool:hover{background:rgba(108,99,255,.2);border-color:rgba(108,99,255,.45)}
+.tool.active{background:linear-gradient(135deg,rgba(108,99,255,.85),rgba(34,211,238,.75));
+  border-color:transparent;color:#04101f;font-weight:700}
+.hint{bottom:22px;left:18px;font-size:11.5px;color:var(--dim);max-width:230px;line-height:1.55}
+.hint kbd{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font-size:10px}
+#loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:20;transition:opacity .6s}
+#loader span{width:34px;height:34px;border-radius:50%;border:2px solid rgba(120,160,255,.2);
+  border-top-color:#6c63ff;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:860px){
+  .panel{top:auto;bottom:74px;right:12px;left:12px;width:auto;max-height:34vh;flex-direction:row;
+    overflow-x:auto;overflow-y:hidden}
+  .panel-head{display:none}
+  .agent-row{grid-template-columns:10px 1fr;min-width:170px}
+  .agent-nums{display:none}
+  .hint{display:none}
+  .toolbar{bottom:12px}
+  .topbar{top:12px;left:12px}
+  .statusline{top:12px;right:12px;padding:9px 11px}
+}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="hud card topbar">
+  <div class="logo">A</div>
+  <div class="brand"><b>ASTRA OS</b><small>3D Ishxona · 360°</small></div>
+</div>
+
+<div class="hud card statusline">
+  <div class="badge" id="connBadge"><i></i><span id="connText">Ulanmoqda…</span></div>
+  <span id="clock" style="color:var(--dim);font-variant-numeric:tabular-nums">--:--</span>
+</div>
+
+<aside class="hud card panel" id="agentsPanel"></aside>
+
+<div class="hud card toolbar">
+  <button class="tool active" id="btnRotate">⟳ 360° aylanish</button>
+  <button class="tool" id="btnReset">◎ Markazga</button>
+  <button class="tool" id="btnFull">⛶ To'liq ekran</button>
+</div>
+
+<div class="hud hint">Sichqonchani tortib <b>to'liq 360°</b> aylantiring · g'ildirak bilan yaqinlashtiring ·
+  <kbd>Shift</kbd>+tortish — surish · agentni bosing</div>
+
+<div id="loader"><span></span></div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const AGENT_META = [
+  { id:'astra',     name:'Astra',      role:'Bosh menejer',           color:0x6c63ff },
+  { id:'marketing', name:'Marketing',  role:'Marketing agenti',       color:0x22d3ee },
+  { id:'dev',       name:'Dev',        role:'Dasturlash agenti',      color:0x34d399 },
+  { id:'support',   name:'Mijozlar',   role:'Mijozlar bilan ishlash', color:0xfbbf24 },
+  { id:'reports',   name:'Hisobotlar', role:'Hisobotlar agenti',      color:0xf472b6 },
+];
+
+const css = n => '#' + n.toString(16).padStart(6,'0');
+const rgba = (n,a) => `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+
+/* ----------------------------- Renderer ----------------------------- */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05070f);
+scene.fog = new THREE.Fog(0x05070f, 30, 55);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+camera.position.set(0, 11, 17);
+
+/* ------------------ 360° orbital boshqaruv (limitsiz) ------------------ */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.rotateSpeed = 0.9;
+controls.zoomSpeed = 0.9;
+controls.panSpeed = 0.7;
+controls.screenSpacePanning = false;
+controls.minDistance = 6;
+controls.maxDistance = 38;
+controls.minPolarAngle = 0.12;
+controls.maxPolarAngle = Math.PI * 0.495;   /* poldan pastga tushmaydi */
+controls.minAzimuthAngle = -Infinity;       /* to'liq 360° gorizontal */
+controls.maxAzimuthAngle = Infinity;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.55;
+controls.target.set(0, 1.35, 0);
+
+/* ------------------------------- Yorug'lik ------------------------------- */
+scene.add(new THREE.AmbientLight(0x8899cc, 0.55));
+scene.add(new THREE.HemisphereLight(0x6c8cff, 0x0a0f1e, 0.8));
+
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(9, 15, 8);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 1;
+key.shadow.camera.far = 45;
+key.shadow.camera.left = -18;
+key.shadow.camera.right = 18;
+key.shadow.camera.top = 18;
+key.shadow.camera.bottom = -18;
+key.shadow.bias = -0.0008;
+scene.add(key);
+
+const rim = new THREE.PointLight(0x6c63ff, 60, 30, 2);
+rim.position.set(-8, 7, -8);
+scene.add(rim);
+
+/* ---------------------------------- Pol ---------------------------------- */
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(15.5, 96),
+  new THREE.MeshStandardMaterial({ color:0x0a1122, roughness:0.55, metalness:0.4 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(32, 64, 0x1e325a, 0x121d33);
+grid.position.y = 0.004;
+grid.material.transparent = true;
+grid.material.opacity = 0.6;
+scene.add(grid);
+
+const halo = new THREE.Mesh(
+  new THREE.RingGeometry(9.2, 9.42, 160),
+  new THREE.MeshBasicMaterial({ color:0x2b4a8f, side:THREE.DoubleSide, transparent:true, opacity:0.55 })
+);
+halo.rotation.x = -Math.PI / 2;
+halo.position.y = 0.012;
+scene.add(halo);
+
+/* ------------------------------ Yordamchilar ------------------------------ */
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+function makeLabel(text, color = '#ffffff') {
+  const DPR = 2, FONT = 52, PADX = 34, PADY = 22;
+  const probe = document.createElement('canvas').getContext('2d');
+  const font = `700 ${FONT}px Inter, system-ui, sans-serif`;
+  probe.font = font;
+  const w = Math.ceil(probe.measureText(text).width) + PADX * 2;
+  const h = FONT + PADY * 2;
+
+  const c = document.createElement('canvas');
+  c.width = w * DPR; c.height = h * DPR;
+  const g = c.getContext('2d');
+  g.scale(DPR, DPR);
+  g.font = font;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+
+  g.fillStyle = 'rgba(8,13,26,.82)';
+  roundRect(g, 1, 1, w - 2, h - 2, h / 2); g.fill();
+  g.strokeStyle = rgba(parseInt(color.replace('#',''), 16), .45);
+  g.lineWidth = 2.5; g.stroke();
+
+  g.fillStyle = color;
+  g.fillText(text, w / 2, h / 2 + 2);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthWrite: false
+  }));
+  const s = 0.0125;
+  sprite.scale.set(w * s, h * s, 1);
+  return sprite;
+}
+
+function makeScreenTexture(meta) {
+  const c = document.createElement('canvas');
+  c.width = 640; c.height = 360;
+  const g = c.getContext('2d');
+  g.fillStyle = '#050a16'; g.fillRect(0, 0, 640, 360);
+
+  const grd = g.createLinearGradient(0, 0, 640, 360);
+  grd.addColorStop(0, rgba(meta.color, .38));
+  grd.addColorStop(1, 'rgba(5,10,22,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 640, 360);
+
+  g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(0, 0, 640, 52);
+  ['#ff5f57', '#febc2e', '#28c840'].forEach((col, i) => {
+    g.fillStyle = col; g.beginPath(); g.arc(26 + i * 22, 26, 7, 0, Math.PI * 2); g.fill();
+  });
+
+  g.fillStyle = rgba(meta.color, 1);
+  g.fillRect(36, 96, 7, 170);
+
+  g.fillStyle = '#ffffff';
+  g.font = '700 46px Inter, system-ui, sans-serif';
+  g.fillText(meta.name, 62, 132);
+
+  g.fillStyle = 'rgba(180,200,240,.72)';
+  g.font = '400 24px Inter, system-ui, sans-serif';
+  g.fillText(meta.role, 62, 170);
+
+  [0.9, 0.6, 0.75, 0.45, 0.65].forEach((ln, i) => {
+    const y = 214 + i * 26;
+    g.fillStyle = 'rgba(120,160,255,.20)';
+    g.fillRect(62, y, 360 * ln, 9);
+    g.fillStyle = rgba(meta.color, .55);
+    g.fillRect(62, y, 26, 9);
+  });
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/* ----------------------------- Markaziy yadro ----------------------------- */
+const core = new THREE.Group();
+core.position.y = 2.4;
+scene.add(core);
+
+const coreShell = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(1.15, 1),
+  new THREE.MeshBasicMaterial({ color:0x6c63ff, wireframe:true, transparent:true, opacity:0.55 })
+);
+core.add(coreShell);
+
+const coreInner = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(0.62, 2),
+  new THREE.MeshStandardMaterial({
+    color:0x22d3ee, emissive:0x22d3ee, emissiveIntensity:1.6,
+    roughness:0.2, metalness:0.6
+  })
+);
+core.add(coreInner);
+
+const coreLight = new THREE.PointLight(0x6c63ff, 45, 22, 2);
+core.add(coreLight);
+
+const orbitRings = [];
+[1.8, 2.3, 2.8].forEach((r, i) => {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(r, 0.016, 8, 140),
+    new THREE.MeshBasicMaterial({
+      color: [0x22d3ee, 0x6c63ff, 0xf472b6][i], transparent:true, opacity:0.42
+    })
+  );
+  ring.rotation.set(Math.PI / 2 + i * 0.34, i * 0.5, 0);
+  core.add(ring);
+  orbitRings.push(ring);
+});
+
+const coreLabel = makeLabel('ASTRA', '#c7d4ff');
+coreLabel.position.set(0, 1.85, 0);
+coreLabel.scale.multiplyScalar(0.85);
+core.add(coreLabel);
+
+/* ------------------------------ Stollar ------------------------------ */
+const desks = [];
+const pickables = [];
+const R = 6.9;
+
+function buildDesk(meta, index, total) {
+  const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
+  const group = new THREE.Group();
+  group.position.set(Math.cos(angle) * R, 0, Math.sin(angle) * R);
+  group.rotation.y = -angle - Math.PI / 2;
+
+  const col = new THREE.Color(meta.color);
+  const metal = new THREE.MeshStandardMaterial({ color:0x1b2540, roughness:0.45, metalness:0.75 });
+  const wood  = new THREE.MeshStandardMaterial({ color:0x2a3554, roughness:0.55, metalness:0.3 });
+
+  const top = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 1.15), wood);
+  top.position.y = 0.94;
+  top.castShadow = true; top.receiveShadow = true;
+  group.add(top);
+
+  [[-1.1,-0.45],[1.1,-0.45],[-1.1,0.45],[1.1,0.45]].forEach(([x, z]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.9, 0.09), metal);
+    leg.position.set(x, 0.45, z);
+    leg.castShadow = true;
+    group.add(leg);
+  });
+
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.32, 12), metal);
+  stand.position.set(0, 1.15, -0.32);
+  group.add(stand);
+
+  const screenTex = makeScreenTexture(meta);
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(1.42, 0.84, 0.05),
+    new THREE.MeshStandardMaterial({
+      map: screenTex, emissiveMap: screenTex, emissive: 0xffffff,
+      emissiveIntensity: 0.85, roughness: 0.35, metalness: 0.1
+    })
+  );
+  screen.position.set(0, 1.72, -0.32);
+  screen.rotation.x = -0.1;
+  screen.castShadow = true;
+  group.add(screen);
+
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.9, 0.03), metal);
+  bezel.position.set(0, 1.72, -0.36);
+  bezel.rotation.x = -0.1;
+  group.add(bezel);
+
+  const chair = new THREE.Group();
+  chair.position.set(0, 0, 1.05);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.1, 0.66), wood);
+  seat.position.y = 0.52; seat.castShadow = true;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.72, 0.09), wood);
+  back.position.set(0, 0.9, 0.3); back.castShadow = true;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 10), metal);
+  pole.position.y = 0.25;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.05, 16), metal);
+  base.position.y = 0.03;
+  chair.add(seat, back, pole, base);
+  group.add(chair);
+
+  const avatar = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 32, 32),
+    new THREE.MeshStandardMaterial({
+      color: col, emissive: col, emissiveIntensity: 1.2,
+      roughness: 0.18, metalness: 0.55
+    })
+  );
+  avatar.position.set(0, 2.5, 0.05);
+  avatar.castShadow = true;
+  avatar.userData.agentId = meta.id;
+  group.add(avatar);
+  pickables.push(avatar);
+
+  const avRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.46, 0.014, 8, 64),
+    new THREE.MeshBasicMaterial({ color: col, transparent:true, opacity:0.7 })
+  );
+  avRing.position.copy(avatar.position);
+  avRing.rotation.x = Math.PI / 2.4;
+  group.add(avRing);
+
+  const label = makeLabel(meta.name, css(meta.color));
+  label.position.set(0, 3.3, 0.05);
+  group.add(label);
+
+  const statusRing = new THREE.Mesh(
+    new THREE.RingGeometry(1.5, 1.62, 96),
+    new THREE.MeshBasicMaterial({
+      color: 0x33415f, transparent:true, opacity:0.55, side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending, depthWrite:false
+    })
+  );
+  statusRing.rotation.x = -Math.PI / 2;
+  statusRing.position.y = 0.02;
+  group.add(statusRing);
+
+  const deskLight = new THREE.PointLight(meta.color, 0, 9, 2);
+  deskLight.position.set(0, 2.6, 0.4);
+  group.add(deskLight);
+
+  scene.add(group);
+  desks.push({ meta, group, avatar, avRing, label, statusRing, deskLight, baseY: 2.5 });
+}
+
+AGENT_META.forEach((m, i) => buildDesk(m, i, AGENT_META.length));
+
+/* --------------------------- Fon yulduzchalari --------------------------- */
+const starGeo = new THREE.BufferGeometry();
+const starCount = 700;
+const pos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  const r = 18 + Math.random() * 28;
+  const th = Math.random() * Math.PI * 2;
+  const ph = Math.acos(Math.random() * 0.9);
+  pos[i * 3]     = r * Math.sin(ph) * Math.cos(th);
+  pos[i * 3 + 1] = Math.abs(r * Math.cos(ph)) * 0.7 + 1;
+  pos[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({
+  color: 0x7f9bd6, size: 0.14, transparent: true, opacity: 0.55, sizeAttenuation: true
+})));
+
+/* ------------------------------- Holat ------------------------------- */
+const STORE = new Map();
+AGENT_META.forEach(m => STORE.set(m.id, {
+  online:false, requests:0, tasks_completed:0, last_seen:null
+}));
+
+let demoMode = false, failedPolls = 0, selectedId = null;
+
+const panel = document.getElementById('agentsPanel');
+const badge = document.getElementById('connBadge');
+const connText = document.getElementById('connText');
+
+function agentCardHTML(m) {
+  const s = STORE.get(m.id);
+  return `<button class="agent-row" data-id="${m.id}">
+    <span class="dot ${s.online ? 'on' : ''}" style="--c:${css(m.color)}"></span>
+    <span class="agent-meta"><b>${m.name}</b><small>${m.role}</small></span>
+    <span class="agent-nums"><b>${s.requests}</b><small>so'rov</small></span>
+    <span class="agent-nums"><b>${s.tasks_completed}</b><small>bajarildi</small></span>
+  </button>`;
+}
+
+let panelHash = '';
+function renderPanel(force = false) {
+  const html = `<div class="panel-head"><span>Agentlar</span>
+    <span class="panel-sub">${AGENT_META.filter(m => STORE.get(m.id).online).length}/${AGENT_META.length} faol</span></div>`
+    + AGENT_META.map(agentCardHTML).join('');
+  if (!force && html === panelHash) return;
+  panelHash = html;
+  panel.innerHTML = html;
+  panel.querySelectorAll('.agent-row').forEach(row => {
+    row.addEventListener('click', () => focusAgent(row.dataset.id));
+  });
+}
+renderPanel(true);
+
+function applyStats(list) {
+  list.forEach(item => {
+    if (!STORE.has(item.id)) return;
+    const s = STORE.get(item.id);
+    s.online = !!item.online;
+    s.requests = Number(item.requests ?? 0);
+    s.tasks_completed = Number(item.tasks_completed ?? item.completed ?? 0);
+    s.last_seen = item.last_seen ?? null;
+  });
+  syncScene();
+  renderPanel();
+}
+
+function syncScene() {
+  desks.forEach(d => {
+    const on = STORE.get(d.meta.id).online;
+    d.avatar.material.emissiveIntensity = on ? 1.6 : 0.22;
+    d.avRing.material.opacity = on ? 0.85 : 0.22;
+    d.statusRing.material.color.set(on ? d.meta.color : 0x33415f);
+    d.statusRing.material.opacity = on ? 0.8 : 0.4;
+    d.deskLight.intensity = on ? 16 : 2;
+  });
+}
+syncScene();
+
+/* ------------------------------- Kamera ------------------------------- */
+let fly = null;
+
+function setRotateUI(on) {
+  document.getElementById('btnRotate').classList.toggle('active', on);
+}
+
+function focusAgent(id) {
+  const d = desks.find(x => x.meta.id === id);
+  if (!d) return;
+  selectedId = id;
+  const target = new THREE.Vector3(d.group.position.x, 1.6, d.group.position.z);
+  const outward = new THREE.Vector3(d.group.position.x, 0, d.group.position.z).normalize();
+  const camPos = target.clone().add(outward.multiplyScalar(5.4)).add(new THREE.Vector3(0, 2.4, 0));
+  fly = {
+    fromPos: camera.position.clone(), toPos: camPos,
+    fromTarget: controls.target.clone(), toTarget: target,
+    t: 0, dur: 1.05
+  };
+  controls.autoRotate = false;
+  setRotateUI(false);
+}
+
+function resetView() {
+  selectedId = null;
+  fly = {
+    fromPos: camera.position.clone(), toPos: new THREE.Vector3(0, 11, 17),
+    fromTarget: controls.target.clone(), toTarget: new THREE.Vector3(0, 1.35, 0),
+    t: 0, dur: 1.05
+  };
+  controls.autoRotate = true;
+  setRotateUI(true);
+}
+
+const easeInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+/* ----------------------------- Interaksiya ----------------------------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downX = 0, downY = 0, downT = 0;
+
+canvas.addEventListener('pointerdown', e => {
+  downX = e.clientX; downY = e.clientY; downT = performance.now();
+});
+
+canvas.addEventListener('pointerup', e => {
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  if (moved > 7 || performance.now() - downT > 500) return;
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (hit) focusAgent(hit.object.userData.agentId);
+});
+
+canvas.addEventListener('pointermove', e => {
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  canvas.style.cursor = raycaster.intersectObjects(pickables, false).length ? 'pointer' : 'grab';
+});
+
+controls.addEventListener('start', () => {
+  fly = null;
+  controls.autoRotate = false;
+  setRotateUI(false);
+});
+
+document.getElementById('btnRotate').addEventListener('click', e => {
+  controls.autoRotate = !controls.autoRotate;
+  setRotateUI(controls.autoRotate);
+  e.currentTarget.blur();
+});
+document.getElementById('btnReset').addEventListener('click', resetView);
+document.getElementById('btnFull').addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') resetView();
+  if (e.key === ' ') {
+    e.preventDefault();
+    controls.autoRotate = !controls.autoRotate;
+    setRotateUI(controls.autoRotate);
+  }
+});
+
+/* ------------------------------- Polling ------------------------------- */
+async function poll() {
+  try {
+    const res = await fetch('/api/agents', { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    demoMode = false; failedPolls = 0;
+    badge.className = 'badge live';
+    connText.textContent = 'LIVE · API';
+    if (Array.isArray(data.agents)) applyStats(data.agents);
+  } catch {
+    failedPolls++;
+    if (failedPolls >= 2) {
+      demoMode = true;
+      badge.className = 'badge demo';
+      connText.textContent = "DEMO · API yo'q";
+      simulate();
+    } else {
+      badge.className = 'badge';
+      connText.textContent = 'Qayta ulanmoqda…';
+    }
+  }
+}
+
+let simTick = 0;
+function simulate() {
+  simTick++;
+  const list = AGENT_META.map((m, i) => {
+    const s = STORE.get(m.id);
+    if (simTick % 3 === 0 && Math.random() < 0.45) s.requests += 1 + (Math.random() < 0.3 ? 1 : 0);
+    if (simTick % 5 === 0 && Math.random() < 0.35) s.tasks_completed += 1;
+    return {
+      id: m.id, name: m.name,
+      online: i !== 3 || simTick % 12 < 9,
+      requests: s.requests, tasks_completed: s.tasks_completed
+    };
+  });
+  applyStats(list);
+}
+
+/* ------------------------------ Animatsiya ------------------------------ */
+const clock = new THREE.Clock();
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  coreShell.rotation.y = t * 0.28;
+  coreShell.rotation.x = Math.sin(t * 0.4) * 0.22;
+  coreInner.rotation.y = -t * 0.5;
+  coreInner.rotation.z = t * 0.22;
+  coreInner.scale.setScalar(1 + Math.sin(t * 2) * 0.045);
+  coreLight.intensity = 40 + Math.sin(t * 2) * 12;
+  orbitRings.forEach((r, i) => {
+    r.rotation.z = t * (0.16 + i * 0.06);
+    r.rotation.x = Math.PI / 2 + Math.sin(t * 0.3 + i) * 0.4;
+  });
+  core.position.y = 2.4 + Math.sin(t * 0.9) * 0.09;
+
+  desks.forEach((d, i) => {
+    const s = STORE.get(d.meta.id);
+    const bob = Math.sin(t * 1.5 + i * 1.7) * (s.online ? 0.075 : 0.03);
+    d.avatar.position.y = d.baseY + bob;
+    d.avRing.position.y = d.avatar.position.y;
+    d.avRing.rotation.z = t * (s.online ? 0.9 : 0.25);
+    d.label.position.y = 3.3 + bob * 0.5;
+
+    if (d.meta.id === selectedId) {
+      d.avatar.scale.setScalar(1 + Math.sin(t * 4) * 0.07);
+      d.statusRing.material.opacity = 0.55 + Math.sin(t * 3) * 0.3;
+    } else {
+      d.avatar.scale.lerp(new THREE.Vector3(1, 1, 1), 0.15);
+      if (s.online) d.statusRing.material.opacity = 0.6 + Math.sin(t * 1.6 + i) * 0.18;
+    }
+  });
+
+  if (fly) {
+    fly.t = Math.min(1, fly.t + 1 / (60 * fly.dur));
+    const k = easeInOut(fly.t);
+    camera.position.lerpVectors(fly.fromPos, fly.toPos, k);
+    controls.target.lerpVectors(fly.fromTarget, fly.toTarget, k);
+    if (fly.t >= 1) fly = null;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+/* ---------------------------- Ishga tushirish ---------------------------- */
+const clockEl = document.getElementById('clock');
+const tick = () => {
+  clockEl.textContent = new Date().toLocaleTimeString('uz-UZ', { hour:'2-digit', minute:'2-digit' });
+};
+tick();
+setInterval(tick, 15000);
+
+poll();
+setInterval(poll, 5000);
+
+setTimeout(() => {
+  const l = document.getElementById('loader');
+  l.style.opacity = '0';
+  setTimeout(() => l.remove(), 650);
+}, 700);
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: astra-ai
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python astra_agents.py
+    healthCheckPath: /healthz
+    disk:
+      name: astra-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: ASTRA_DB_PATH
+        value: /var/data/astra.sqlite3
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
+      - key: TELEGRAM_GROUP_ID
+        value: "0"
+      - { key: BOT_ASTRA_TOKEN,     sync: false }
+      - { key: BOT_MARKETING_TOKEN, sync: false }
+      - { key: BOT_DEV_TOKEN,       sync: false }
+      - { key: BOT_SUPPORT_TOKEN,   sync: false }
+      - { key: BOT_REPORTS_TOKEN,   sync: false }
+      - { key: TOPIC_ASTRA_ID,      value: "0" }
+      - { key: TOPIC_MARKETING_ID,  value: "0" }
+      - { key: TOPIC_DEV_ID,        value: "0" }
+      - { key: TOPIC_SUPPORT_ID,    value: "0" }
+      - { key: TOPIC_REPORTS_ID,    value: "0" }

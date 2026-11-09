@@ -2,19 +2,15 @@ services:
   - type: web
     name: astra-ai
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python astra_agents.py
     healthCheckPath: /healthz
-    disk:
-      name: astra-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.6
       - key: ASTRA_DB_PATH
-        value: /var/data/astra.sqlite3
+        value: data/astra.sqlite3
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_MODEL

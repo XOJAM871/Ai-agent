@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.local
+data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+README.md
+render.yaml
